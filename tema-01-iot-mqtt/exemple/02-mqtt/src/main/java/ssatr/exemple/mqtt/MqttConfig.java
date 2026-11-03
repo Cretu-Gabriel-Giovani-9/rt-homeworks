@@ -10,7 +10,7 @@ public class MqttConfig {
 
     public static final String BROKER = "tcp://control.aut.utcluj.ro:11188";
 
-    public static final String STUDENT = "popescu-ion";
+    public static final String STUDENT = "cretu-giovani-gabriel";
 
     public static final String TOPIC = "ssatr/" + STUDENT + "/exemplu/salut";
 }

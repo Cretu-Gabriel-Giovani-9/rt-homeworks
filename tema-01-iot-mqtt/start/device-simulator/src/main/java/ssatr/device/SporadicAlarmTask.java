@@ -1,7 +1,8 @@
 package ssatr.device;
 
+import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
-
+import java.util.function.DoubleSupplier;
 /**
  * TASK SPORADIC: tratează alarmele de temperatură.
  *
@@ -18,24 +19,56 @@ public class SporadicAlarmTask implements Runnable {
     private final String deviceId;
     private final MqttConnection mqtt;
     private final BlockingQueue<Double> alarmEvents;
+    private final DoubleSupplier threshold;   // pragul curent, citit de la taskul periodic
 
-    public SporadicAlarmTask(String deviceId, MqttConnection mqtt, BlockingQueue<Double> alarmEvents) {
+    public SporadicAlarmTask(String deviceId, MqttConnection mqtt,
+                             BlockingQueue<Double> alarmEvents, DoubleSupplier threshold) {
         this.deviceId = deviceId;
         this.mqtt = mqtt;
         this.alarmEvents = alarmEvents;
+        this.threshold = threshold;
     }
 
     @Override
     public void run() {
-        // TODO 2: implementați taskul sporadic:
-        //   - așteptați un eveniment: alarmEvents.take()
-        //   - dacă de la ultima eliberare au trecut mai puțin de
-        //     MIN_INTERARRIVAL_MS, respingeți evenimentul (afișați un mesaj)
-        //   - altfel publicați pe Config.alarmTopic(deviceId) mesajul
-        //     "deviceId;timestamp;temperatura;prag"
-        //     (pragul curent poate fi transmis împreună cu temperatura sau
-        //      citit din PeriodicTelemetryTask; alegeți și justificați în raport)
-        //
-        // Vezi exemplul exemple/01-taskuri/.../SporadicTaskExample.java
+        long minNs = MIN_INTERARRIVAL_MS * 1_000_000L;
+        long lastReleaseNs = 0;
+        boolean hasReleased = false;   // până la prima alarmă nu există "ultima eliberare"
+
+        while (!Thread.currentThread().isInterrupted()) {
+            double temperature;
+            try {
+                temperature = alarmEvents.take();          // blochează până sosește un eveniment
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+
+            long arrivalNs = System.nanoTime();            // momentul sosirii (eliberarea jobului)
+
+            // Impunem intervalul minim între sosiri: respingem, nu amânăm.
+            if (hasReleased && arrivalNs - lastReleaseNs < minNs) {
+                double sinceMs = (arrivalNs - lastReleaseNs) / 1e6;
+                System.out.printf(Locale.US,
+                        "[sporadic] eveniment RESPINS (T=%.2f): au trecut doar %.0f ms < %d ms%n",
+                        temperature, sinceMs, MIN_INTERARRIVAL_MS);
+                continue;
+            }
+
+            // Eveniment acceptat: aceasta este o eliberare a taskului sporadic.
+            lastReleaseNs = arrivalNs;
+            hasReleased = true;
+
+            double th = threshold.getAsDouble();
+            String message = deviceId + ";" + System.currentTimeMillis() + ";"
+                    + String.format(Locale.US, "%.2f", temperature) + ";"
+                    + String.format(Locale.US, "%.2f", th);
+            mqtt.publish(Config.alarmTopic(deviceId), message);
+
+            double rMs = (System.nanoTime() - arrivalNs) / 1e6;   // timp de răspuns R
+            System.out.printf(Locale.US,
+                    "[sporadic] ALARMA publicată (T=%.2f, prag=%.2f), R=%.2f ms%n",
+                    temperature, th, rMs);
+        }
     }
 }
