@@ -17,12 +17,11 @@ const char* const BROKER_URI = "mqtt://control.aut.utcluj.ro:11188";
 // serverul de la care placa ia ora exactă (SNTP), pentru timestamp-uri
 const char* const NTP_SERVER = "pool.ntp.org";
 
-const char* const STUDENT = "popescu-ion";
+// Pune exact identificatorul tău (același ca în Config.java din business-service)
+const char* const STUDENT = "cretu-giovani-gabriel";
 
 // ID-ul device-ului, folosit în topic-uri și în mesaje: "esp32-" urmat de
 // ultimele 6 cifre hexa ale adresei MAC a plăcii, de exemplu "esp32-a1b2c3".
-// Fiecare placă are astfel alt ID, fără nicio setare. Se citește la pornire
-// (connection.cpp) și se afișează pe Serial; se folosește ca un șir constant.
 extern const char* const DEVICE_ID;
 
 // Valorile de pornire, schimbate prin comenzi (SET_INTERVAL, SET_THRESHOLD)
@@ -33,14 +32,7 @@ const float THRESHOLD_INITIAL = 45.0f;    // pragul de alarmă, în °C (vezi re
 // intervalul minim între sosiri pentru taskul sporadic
 const uint32_t MIN_INTERARRIVAL_MS = 5000;
 
-// Scrie în buf topic-ul "ssatr/<STUDENT>/devices/<DEVICE_ID>/<kind>". kind este:
-//   "telemetry"  date periodice: "deviceId;timestamp;temperatura"
-//   "alarm"      alarme (sporadice): "deviceId;timestamp;temperatura;prag"
-//   "commands"   comenzi de la business service: "SET_INTERVAL 2000" etc.
-//   "status"     confirmări după executarea unei comenzi: "deviceId;timestamp;text"
-//
-//   char topic[80];
-//   make_topic(topic, sizeof(topic), "telemetry");
+// Scrie în buf topic-ul "ssatr/<STUDENT>/devices/<DEVICE_ID>/<kind>".
 inline void make_topic(char* buf, size_t size, const char* kind) {
     snprintf(buf, size, "ssatr/%s/devices/%s/%s", STUDENT, DEVICE_ID, kind);
 }
