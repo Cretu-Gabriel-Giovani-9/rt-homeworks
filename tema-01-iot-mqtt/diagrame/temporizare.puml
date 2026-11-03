@@ -1,0 +1,54 @@
+﻿@startuml
+scale 100 as 100 pixels
+
+robust "Job Periodic (Telemetrie)" as Periodic
+concise "Job Aperiodic (Executie Comanda)" as Aperiodic
+robust "Stare Alarma (T > Prag)" as AlarmState
+robust "Generare Mesaj MQTT Alarma" as AlarmMQTT
+
+@0
+Periodic is "Perioada 2000ms"
+Aperiodic is Idle
+AlarmState is Normal
+AlarmMQTT is Idle
+
+@2
+Periodic is "Perioada 2000ms"
+AlarmState is "Depasire (T=28.42)"
+AlarmMQTT is "Generare Alarma (OK)"
+note bottom of AlarmMQTT : t=2s: Trimis pe topic alarm\nResetare timestamp ultima alarma
+
+@2.3
+AlarmMQTT is Idle
+
+@4
+Periodic is "Perioada 2000ms"
+AlarmState is "Depasire (T=28.15)"
+AlarmMQTT is Idle
+note bottom of AlarmMQTT : t=4s: Blocat de MIN_INTERARRIVAL\n(Au trecut doar 2s < 5s)
+
+@4.5
+AlarmState is Normal
+
+@6
+Periodic is "Comutare Perioada"
+Aperiodic is "Procesare SET_INTERVAL 1000"
+note top of Aperiodic : t=6s: Receptie comanda\nTrimitere OK pe /status
+
+@6.2
+Aperiodic is Idle
+Periodic is "Perioada 1000ms"
+
+@7
+Periodic is "Perioada 1000ms"
+
+@8
+Periodic is "Perioada 1000ms"
+
+@9
+Periodic is "Perioada 1000ms"
+
+@10
+Periodic is "Perioada 1000ms"
+
+@enduml

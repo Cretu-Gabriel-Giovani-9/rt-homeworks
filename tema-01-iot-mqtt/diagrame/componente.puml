@@ -1,0 +1,59 @@
+﻿@startuml
+skinparam componentStyle uml2
+
+package "Sistem IoT - Tema 01" {
+
+    component [Business Service] as BS {
+        portin "MQTT In" as BS_IN
+        portout "MQTT Out" as BS_OUT
+        [Consola Interactiva]
+        [Storage Service (CSV)] as CSV_WRITER
+    }
+
+    node "MQTT Broker" as Broker {
+        [tcp://control.aut.utcluj.ro:11188]
+        queue "ssatr/.../devices/+/telemetry" as TOPIC_TELEM
+        queue "ssatr/.../devices/+/alarm" as TOPIC_ALARM
+        queue "ssatr/.../devices/+/status" as TOPIC_STATUS
+        queue "ssatr/.../devices/{id}/command" as TOPIC_CMD
+    }
+
+    node "Dispozitive Simulate" {
+        component [Device Simulator 1\n(device-1)] as DEV1 {
+            [Periodic Job\n(Senzor Temp)] as SENS1
+            [Aperiodic Job\n(Comenzi)] as APER1
+        }
+        
+        component [Device Simulator 2\n(device-2)] as DEV2 {
+            [Periodic Job\n(Senzor Temp)] as SENS2
+            [Aperiodic Job\n(Comenzi)] as APER2
+        }
+    }
+
+    database "Data Files" {
+        file "alarm.csv" as F_ALARM
+        file "status.csv" as F_STATUS
+    }
+}
+
+SENS1 --> TOPIC_TELEM : Publish Telemetrie
+SENS1 ..> TOPIC_ALARM : Publish Alarma (T > Prag)
+APER1 --> TOPIC_STATUS : Publish Raspuns Comanda
+
+SENS2 --> TOPIC_TELEM : Publish Telemetrie
+SENS2 ..> TOPIC_ALARM : Publish Alarma (T > Prag)
+APER2 --> TOPIC_STATUS : Publish Raspuns Comanda
+
+TOPIC_CMD --> APER1 : Subscribe Comenzi
+TOPIC_CMD --> APER2 : Subscribe Comenzi
+
+BS_OUT --> TOPIC_CMD : Publish Comanda (SET_INTERVAL, STATUS)
+TOPIC_TELEM --> BS_IN : Subscribe
+TOPIC_ALARM --> BS_IN : Subscribe
+TOPIC_STATUS --> BS_IN : Subscribe
+
+BS_IN --> CSV_WRITER
+CSV_WRITER --> F_ALARM
+CSV_WRITER --> F_STATUS
+
+@enduml

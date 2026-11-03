@@ -1,0 +1,26 @@
+﻿@startuml
+autonumber
+actor "Operator\n(Consola)" as User
+participant "Business Service" as BS
+participant "MQTT Broker" as Broker
+participant "Device Simulator\n(device-1)" as Dev1
+
+== Flux 1: Declanșare și Propagare Alarmă ==
+Dev1 -> Dev1: Masurare periodica: T = 28.42 > 28.00\n(Verificare MIN_INTERARRIVAL_MS)
+Dev1 -> Broker: PUBLISH ssatr/.../devices/device-1/alarm\n{"temp": 28.42, "threshold": 28.00}
+Broker -> BS: ARRIVE ssatr/.../devices/device-1/alarm
+BS -> BS: Actualizare stare memorie (alarms_count++)
+BS -> BS: Append record in data/alarm.csv
+BS -> User: [ALARMA] device-1: temperatura 28.42 depaseste pragul 28.00
+
+== Flux 2: Comandă Asincronă SET_INTERVAL 1000 ==
+User -> BS: Tastare: device-1 SET_INTERVAL 1000
+BS -> Broker: PUBLISH ssatr/.../devices/device-1/command\n"SET_INTERVAL 1000"
+Broker -> Dev1: ARRIVE ssatr/.../devices/device-1/command
+Dev1 -> Dev1: Executie aperiodica: actualizare period = 1000 ms
+Dev1 -> Broker: PUBLISH ssatr/.../devices/device-1/status\n"OK SET_INTERVAL 1000"
+Broker -> BS: ARRIVE ssatr/.../devices/device-1/status
+BS -> BS: Append record in data/status.csv
+BS -> User: [STATUS] device-1: OK SET_INTERVAL 1000
+
+@enduml
